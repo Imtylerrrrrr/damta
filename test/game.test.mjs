@@ -135,8 +135,33 @@ test('불 붙은 담배 입에 물고 O 입모양 → 폐 게이지 상승·담�
   assert.ok(ev.includes('puff'));
   assert.ok(ev.includes('full'));
   assert.ok(g.cig.len < len0);
-  // 가득 찬 뒤 O 입모양은 내뿜기로 해석 → 링 생성
-  assert.ok(g.rings.length > 0, 'rings after full + O');
+  // 가득 찬 뒤에도 '오'를 계속 하고 있으면 바로 내뿜지 않는다 (루프 방지)
+  assert.equal(g.rings.length, 0, 'no rings while still holding O');
+  assert.equal(g.exhaleLock, true);
+  assert.match(g.hint, /머금/);
+  // 입을 다물고 잠깐 머금은 뒤 O → 내뿜기
+  const ev2 = step(g, { face: face() }, TIMING.holdSeconds + 0.2);
+  assert.ok(ev2.includes('hold'));
+  assert.equal(g.exhaleLock, false);
+  step(g, { face: face({ pucker: 0.8 }) }, 0.3);
+  assert.ok(g.rings.length > 0, 'rings after hold + O');
+});
+
+test('빨다가 입을 떼도 입을 다물기 전엔 내뿜지 않음', () => {
+  const g = mk();
+  putInMouth(g);
+  lightIt(g);
+  step(g, { face: face({ pucker: 0.8 }) }, 0.7);
+  // 담배를 입에서 빼서 멀리 든 채로 계속 '오'
+  const geo = cigGeometry(g);
+  g.update(1 / 30, { face: face({ pucker: 0.8 }), hands: [hand('L', (g.cig.x + geo.tipX) / 2, (g.cig.y + geo.tipY) / 2)] });
+  step(g, { face: face({ pucker: 0.8 }), hands: [hand('L', 900, 500)] }, 0.6);
+  assert.equal(g.exhaling, false);
+  assert.equal(g.rings.length, 0);
+  // 입 다물고 머금기 → 벌리면 나감
+  step(g, { face: face(), hands: [hand('L', 900, 500)] }, TIMING.holdSeconds + 0.2);
+  step(g, { face: face({ jawOpen: 0.6 }), hands: [hand('L', 900, 500)] }, 0.3);
+  assert.ok(g.rings.length > 0);
 });
 
 test('폐에 연기 있고 입 벌리면 도넛 링이 나가고 폐가 줄어듦', () => {
@@ -149,7 +174,7 @@ test('폐에 연기 있고 입 벌리면 도넛 링이 나가고 폐가 줄어�
   const geo = cigGeometry(g);
   g.update(1 / 30, { face: face(), hands: [hand('L', (g.cig.x + geo.tipX) / 2, (g.cig.y + geo.tipY) / 2)] });
   assert.equal(g.cig.state, 'held');
-  step(g, { face: face(), hands: [hand('L', 900, 500)] }, 0.3);
+  step(g, { face: face(), hands: [hand('L', 900, 500)] }, TIMING.holdSeconds + 0.2);
   const lungsBefore = g.lungs;
   const ev = step(g, { face: face({ jawOpen: 0.6 }), hands: [hand('L', 900, 500)] }, 0.5);
   assert.ok(ev.includes('exhale'));
@@ -167,8 +192,11 @@ test('도넛 입(funnel, 입 조금)은 타이트한 링', () => {
   step(g, { face: face({ funnel: 0.6, jawOpen: 0.2 }) }, 0.7);
   assert.equal(g.rings.length, 0);
   assert.equal(g.puffing, true);
-  // 가득 차면 같은 입모양이 '내뿜기'로 바뀌고, 도넛 입이라 타이트한 링
+  // 가득 차도 같은 입모양을 유지하면 안 나온다 → 입 다물고 머금은 뒤 도넛 입이면 타이트한 링
   step(g, { face: face({ funnel: 0.6, jawOpen: 0.2 }) }, TIMING.puffFillSeconds);
+  assert.equal(g.rings.length, 0);
+  step(g, { face: face() }, TIMING.holdSeconds + 0.2);
+  step(g, { face: face({ funnel: 0.6, jawOpen: 0.2 }) }, 0.3);
   assert.ok(g.rings.length > 0);
   assert.ok(g.rings.every((r) => r.donut));
 });
@@ -224,7 +252,9 @@ test('20개 다 피우면 none', () => {
 });
 
 test('mouthShape 임계값', () => {
-  assert.deepEqual(mouthShape(null), { o: false, open: false, donut: false });
+  assert.deepEqual(mouthShape(null), { o: false, open: false, donut: false, neutral: false });
+  assert.equal(mouthShape({ pucker: 0.1, funnel: 0.05, jawOpen: 0.05 }).neutral, true);
+  assert.equal(mouthShape({ pucker: 0.4, funnel: 0.05, jawOpen: 0.05 }).neutral, false);
   assert.equal(mouthShape({ pucker: 0.6, funnel: 0, jawOpen: 0 }).o, true);
   assert.equal(mouthShape({ pucker: 0, funnel: 0.5, jawOpen: 0.1 }).donut, true);
   assert.equal(mouthShape({ pucker: 0, funnel: 0.5, jawOpen: 0.6 }).donut, false);

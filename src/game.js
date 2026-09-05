@@ -13,6 +13,7 @@ export const TIMING = {
   exhaleEmptySeconds: 1.6,
   ringInterval: 0.22,
   handGrace: 0.6,
+  holdSeconds: 0.3, // 빨기 끝난 뒤 입을 다물고 머금어야 하는 시간
 };
 
 const FILTER_FRAC = 0.27;
@@ -41,11 +42,12 @@ function distToSegment(px, py, ax, ay, bx, by) {
 }
 
 export function mouthShape(face) {
-  if (!face) return { o: false, open: false, donut: false };
+  if (!face) return { o: false, open: false, donut: false, neutral: false };
   const o = face.pucker > THRESH.pucker || face.funnel > THRESH.funnel;
   const open = face.jawOpen > THRESH.jawOpen;
   const donut = face.funnel > THRESH.funnel && face.jawOpen < 0.45;
-  return { o, open, donut };
+  const neutral = face.pucker < 0.3 && face.funnel < 0.2 && face.jawOpen < 0.15;
+  return { o, open, donut, neutral };
 }
 
 // ---------- 지오메트리 (렌더러도 같은 함수를 쓴다) ----------
@@ -110,6 +112,8 @@ export function createGame({ width, height, random = Math.random } = {}) {
     lungs: 0,
     puffing: false,
     exhaling: false,
+    exhaleLock: false, // 빨기 직후: 입을 다물고 머금기 전까지 내뿜기 금지
+    holdTimer: 0,
     lightProgress: 0,
     ringTimer: 0,
     smokeTimer: 0,
@@ -139,6 +143,8 @@ export function createGame({ width, height, random = Math.random } = {}) {
     g.lungs = 0;
     g.puffing = false;
     g.exhaling = false;
+    g.exhaleLock = false;
+    g.holdTimer = 0;
     g.lightProgress = 0;
     g.particles.length = 0;
     g.rings.length = 0;
@@ -391,8 +397,24 @@ function updateSmoking(g, dt) {
     c.ash += dt * 0.08;
     if (before < 1 && g.lungs >= 1) emit(g, 'full');
   }
+  // 빨기가 끝나면(가득 찼거나 입을 뗐거나) 같은 입모양으로 바로 내뿜지 못한다.
+  // 입을 다물고 잠깐 머금은 뒤에야 내뿜기가 열린다 → '오' 유지 시 빨기↔내뿜기 루프 방지.
+  if (wasPuffing && !g.puffing) {
+    g.exhaleLock = true;
+    g.holdTimer = TIMING.holdSeconds;
+  }
+  if (g.exhaleLock) {
+    if (shape.neutral) {
+      g.holdTimer -= dt;
+      if (g.holdTimer <= 0) {
+        g.exhaleLock = false;
+        emit(g, 'hold');
+      }
+    }
+    if (g.lungs <= 0.1) g.exhaleLock = false;
+  }
 
-  const wantExhale = g.lungs > 0.1 && !g.puffing && (shape.open || shape.o);
+  const wantExhale = g.lungs > 0.1 && !g.puffing && !g.exhaleLock && (shape.open || shape.o);
   const wasExhaling = g.exhaling;
   g.exhaling = wantExhale;
   if (g.exhaling) {
@@ -626,6 +648,7 @@ function computeHint(g) {
   if (!g.face) return '얼굴이 보이게 카메라 앞에 앉아봐 📷';
   if (g.exhaling) return '후우~ 🍩';
   if (g.puffing) return '쓰~읍…';
+  if (g.exhaleLock && g.lungs > 0.1) return '입 다물고 잠깐 머금어… 😶';
   if (g.lungs >= 0.999) return '후~ 입을 벌리거나 도넛 입으로 내뿜어봐 🍩';
   if (c.state === 'pack') {
     return g.hands.length ? '🤏 엄지+검지로 갑에서 담배를 집어봐' : '손을 들어봐 ✋ 엄지+검지로 담배를 집는 거야';
