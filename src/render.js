@@ -85,9 +85,16 @@ function drawPack(ctx, g) {
   ctx.fillStyle = t.accent;
   ctx.fill();
   ctx.fillStyle = t.label;
-  ctx.font = `700 ${Math.round(p.w * 0.3)}px "Pretendard", "Apple SD Gothic Neo", system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  // 긴 이름(아이스잭)은 갑 폭에 맞춰 글자 크기를 줄인다
+  let labelPx = p.w * 0.3;
+  ctx.font = `700 ${Math.round(labelPx)}px "Pretendard", "Apple SD Gothic Neo", system-ui, sans-serif`;
+  const labelW = ctx.measureText(g.type.name).width;
+  if (labelW > p.w * 0.88) {
+    labelPx *= (p.w * 0.88) / labelW;
+    ctx.font = `700 ${Math.round(labelPx)}px "Pretendard", "Apple SD Gothic Neo", system-ui, sans-serif`;
+  }
   ctx.fillText(g.type.name, 0, p.h * 0.17);
   ctx.font = `500 ${Math.round(p.w * 0.16)}px system-ui, sans-serif`;
   ctx.globalAlpha = 0.75;
@@ -361,7 +368,7 @@ function drawDebug(ctx, g, fps) {
   ctx.font = '13px ui-monospace, Menlo, monospace';
   ctx.textBaseline = 'top';
   const lines = [
-    `fps ${fps.toFixed(0)}  unit ${g.unit.toFixed(0)}`,
+    `fps ${fps.toFixed(0)}  unit ${g.unit.toFixed(0)}  canvas ${ctx.canvas.width}x${ctx.canvas.height}  view ${g.view.w.toFixed(0)}x${g.view.h.toFixed(0)}`,
     `cig ${g.cig.state} lit=${g.cig.lit} len=${g.cig.len.toFixed(2)} ember=${g.cig.ember.toFixed(2)}`,
     `lungs ${g.lungs.toFixed(2)} puff=${g.puffing} exhale=${g.exhaling} light=${g.lightProgress.toFixed(2)}`,
     `lighter held=${g.lighter.heldBy} flame=${g.lighter.flame}`,
@@ -375,12 +382,15 @@ function drawDebug(ctx, g, fps) {
   const x = 12;
   let y = canvasTopOffset(ctx);
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(x - 6, y - 6, 560, lines.length * 17 + 12);
+  ctx.fillRect(x - 6, y - 6, Math.min(ctx.canvas.width - 12, 620), lines.length * 17 + 12);
   ctx.fillStyle = '#9dff9d';
   for (const l of lines) {
     ctx.fillText(l, x, y);
     y += 17;
   }
+  ctx.strokeStyle = 'rgba(255,255,0,0.5)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(g.view.x + 1, g.view.y + 1, g.view.w - 2, g.view.h - 2);
   if (g.face) {
     ctx.strokeStyle = 'rgba(0,255,255,0.6)';
     ctx.lineWidth = 1.5;

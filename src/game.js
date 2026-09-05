@@ -104,7 +104,8 @@ export function createGame({ width, height, random = Math.random } = {}) {
   const g = {
     w: width,
     h: height,
-    unit: height * 0.2,
+    view: { x: 0, y: 0, w: width, h: height }, // 실제로 화면에 보이는 캔버스 영역(object-fit: cover 크롭 반영)
+    unit: Math.min(height * 0.2, width * 0.3),
     type: null,
     pack: { x: 0, y: 0, count: 0 },
     lighter: { x: 0, y: 0, homeX: 0, homeY: 0, heldBy: null, flame: false, missing: 0 },
@@ -151,9 +152,22 @@ export function createGame({ width, height, random = Math.random } = {}) {
     g.events.length = 0;
   };
 
+  g.setView = (view) => {
+    g.view = { x: view.x, y: view.y, w: view.w, h: view.h };
+    g.unit = clamp(g.unit, unitMin(g), unitMax(g));
+    layoutHomes(g);
+    if (!g.lighter.heldBy) {
+      g.lighter.x = g.lighter.homeX;
+      g.lighter.y = g.lighter.homeY;
+    }
+    if (g.cig.state === 'pack') placeInPack(g);
+  };
+
   g.resize = (w, h) => {
     g.w = w;
     g.h = h;
+    g.view = { x: 0, y: 0, w, h };
+    g.unit = clamp(g.unit, unitMin(g), unitMax(g));
     layoutHomes(g);
     if (!g.lighter.heldBy) {
       g.lighter.x = g.lighter.homeX;
@@ -169,7 +183,7 @@ export function createGame({ width, height, random = Math.random } = {}) {
     g.face = input.face ?? null;
     g.hands = input.hands ?? [];
     if (g.face) {
-      const target = clamp(g.face.size * 0.95, g.h * 0.12, g.h * 0.4);
+      const target = clamp(g.face.size * 0.95, unitMin(g), unitMax(g));
       g.unit = lerp(g.unit, target, 0.08);
       layoutHomes(g);
       if (!g.lighter.heldBy) {
@@ -210,11 +224,21 @@ function freshCig() {
   };
 }
 
+function unitMin(g) {
+  return g.view.h * 0.12;
+}
+function unitMax(g) {
+  return Math.min(g.view.h * 0.4, g.view.w * 0.3);
+}
+
+// 갑은 보이는 영역의 왼쪽 아래, 라이터는 오른쪽 아래. 좁은 세로 화면에서도 잘리지 않게 unit 기준 여백을 보장한다.
 function layoutHomes(g) {
-  g.pack.x = g.w * 0.14;
-  g.pack.y = g.h * 0.8;
-  g.lighter.homeX = g.w * 0.86;
-  g.lighter.homeY = g.h * 0.83;
+  const v = g.view;
+  const u = g.unit;
+  g.pack.x = v.x + Math.max(v.w * 0.14, u * 0.4);
+  g.pack.y = v.y + Math.min(v.h * 0.8, v.h - u * 0.55);
+  g.lighter.homeX = v.x + v.w - Math.max(v.w * 0.14, u * 0.3);
+  g.lighter.homeY = v.y + Math.min(v.h * 0.83, v.h - u * 0.4);
 }
 
 function placeInPack(g) {

@@ -21,6 +21,8 @@ npm start          # python3 -m http.server 8787
 
 빌드 없음. MediaPipe Tasks Vision(`@mediapipe/tasks-vision@1.0.1`)과 모델을 CDN에서 바로 받는다. 크롬 권장.
 
+**모바일**: 폰 전면카메라로도 된다(https 필요 → 배포 링크). 세로 화면에선 세로 스트림을 요청하고, `object-fit: cover`로 잘려 나간 영역을 빼고 **보이는 영역 안**에 갑·라이터를 배치한다(`game.setView`). 느린 기기에서는 손/얼굴 모델을 프레임마다 번갈아 돌려 프레임을 유지하고, 화면 꺼짐 방지(Wake Lock)·안전영역·핀치줌 방지를 적용했다.
+
 `d` 키 또는 우상단 **디버그** 버튼: FPS·blendshape 값(jawOpen / mouthFunnel / mouthPucker)·핀치 비율을 보여준다. 임계값은 `src/game.js`의 `THRESH`, 핀치 임계값은 `src/tracking.js`의 `PINCH_ON/OFF`.
 
 ## 테스트

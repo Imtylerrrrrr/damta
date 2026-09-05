@@ -260,3 +260,32 @@ test('mouthShape 임계값', () => {
   assert.equal(mouthShape({ pucker: 0, funnel: 0.5, jawOpen: 0.6 }).donut, false);
   assert.equal(mouthShape({ pucker: 0, funnel: 0, jawOpen: 0.4 }).open, true);
 });
+
+test('setView: 세로 화면 크롭 영역 안에 갑·라이터가 놓인다', () => {
+  const g = createGame({ width: 1280, height: 720 });
+  g.selectType('masse');
+  // 가로 1280x720 스트림을 세로 폰(9:19.5)에 cover로 띄우면 가운데 세로 띠만 보인다
+  const view = { x: 473, y: 0, w: 333, h: 720 };
+  g.setView(view);
+  const inside = (x, y) => x >= view.x && x <= view.x + view.w && y >= view.y && y <= view.y + view.h;
+  assert.ok(inside(g.pack.x, g.pack.y), `pack ${g.pack.x},${g.pack.y}`);
+  assert.ok(inside(g.lighter.x, g.lighter.y), `lighter ${g.lighter.x},${g.lighter.y}`);
+  assert.ok(inside(g.cig.x, g.cig.y), `cig ${g.cig.x},${g.cig.y}`);
+  assert.ok(g.pack.x < g.lighter.x);
+  // unit 이 좁은 폭에 맞게 제한된다
+  assert.ok(g.unit <= view.w * 0.3 + 1e-9);
+  // 얼굴이 커도 unit 상한 유지
+  step(g, { face: face({ size: 400, mouth: { x: 640, y: 300 } }) }, 3);
+  assert.ok(g.unit <= view.w * 0.3 + 1e-9);
+  assert.ok(inside(g.pack.x, g.pack.y));
+});
+
+test('resize: 세로 스트림(720x1280)으로 바뀌면 전체가 view', () => {
+  const g = createGame({ width: 1280, height: 720 });
+  g.selectType('masse');
+  g.resize(720, 1280);
+  assert.deepEqual(g.view, { x: 0, y: 0, w: 720, h: 1280 });
+  assert.ok(g.pack.y < 1280 && g.pack.y > 900);
+  assert.ok(g.lighter.x > 500 && g.lighter.x < 720);
+  assert.equal(g.cig.state, 'pack');
+});

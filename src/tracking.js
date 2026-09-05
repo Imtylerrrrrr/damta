@@ -49,13 +49,25 @@ export async function createTracker({ onStatus = () => {} } = {}) {
   const pinchState = new Map();
   const smooth = { jawOpen: 0, funnel: 0, pucker: 0 };
   let lastTs = -1;
+  let lastHands = [];
+  let lastFace = null;
+  const ms = { hands: 0, face: 0 }; // 모델별 소요 시간 EMA — 느린 기기에서 번갈아 돌릴지 결정에 쓴다
 
-  function detect(video, tsMs, W, H) {
+  // run.hands / run.face 를 false로 주면 그 모델은 건너뛰고 직전 결과를 재사용한다.
+  function detect(video, tsMs, W, H, run = { hands: true, face: true }) {
     if (tsMs <= lastTs) tsMs = lastTs + 1;
     lastTs = tsMs;
-    const hr = hands.detectForVideo(video, tsMs);
-    const fr = face.detectForVideo(video, tsMs);
-    return { hands: parseHands(hr, W, H), face: parseFace(fr, W, H) };
+    if (run.hands !== false) {
+      const t0 = performance.now();
+      lastHands = parseHands(hands.detectForVideo(video, tsMs), W, H);
+      ms.hands = ms.hands * 0.8 + (performance.now() - t0) * 0.2;
+    }
+    if (run.face !== false) {
+      const t0 = performance.now();
+      lastFace = parseFace(face.detectForVideo(video, tsMs), W, H);
+      ms.face = ms.face * 0.8 + (performance.now() - t0) * 0.2;
+    }
+    return { hands: lastHands, face: lastFace, ms };
   }
 
   function parseHands(hr, W, H) {
