@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>담타 🚬</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="stage">
+    <video id="cam" playsinline muted autoplay></video>
+    <canvas id="scene" width="1280" height="720"></canvas>
+
+    <div id="hud" hidden>
+      <div class="hud-top">
+        <div id="brand"><span id="brand-name"></span><span id="pack-count"></span></div>
+        <div class="hud-actions">
+          <button id="btn-change" type="button">종류 바꾸기</button>
+          <button id="btn-debug" type="button" title="d 키">디버그</button>
+        </div>
+      </div>
+      <div id="lungs" title="폐"><div id="lungs-fill"></div><span>폐</span></div>
+      <div id="hint"></div>
+    </div>
+
+    <div id="overlay">
+      <div class="panel">
+        <h1>담타 <span>🚬</span></h1>
+        <p class="sub">손으로 집고 · 라이터로 불 붙이고 · 입으로 <b>'오~'</b> 빨고 · 입 벌려 <b>도넛</b> 내뿜기</p>
+        <div id="cards"></div>
+        <p id="status"></p>
+        <ul class="how">
+          <li>🤏 <b>엄지+검지를 붙이는 핀치</b>로 담배·라이터를 잡아요. 손을 펴면 놓아요.</li>
+          <li>👄 입 근처에서 손을 펴면 담배를 <b>입에 물어요</b>. 그 손으로 라이터를 집어 끝에 대면 불이 붙어요.</li>
+          <li>😗 불 붙은 담배를 입에 대고 <b>'오~'</b> 하면 빨려요. 폐 게이지가 차면 <b>입을 벌리거나 도넛 입</b>으로 후~</li>
+        </ul>
+        <p class="tip">웹캠 + 크롬 권장 · 재미로 만든 장난감 · 담배는 몸에 해로워요 🙃</p>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

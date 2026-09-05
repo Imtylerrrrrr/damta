@@ -1,0 +1,12 @@
+{
+  "name": "damta",
+  "version": "0.1.0",
+  "description": "담타 — 손·입 인식으로 담배 피우는 웹 토이 (MediaPipe)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8787",
+    "test": "node --test test/*.test.mjs"
+  },
+  "license": "MIT"
+}
